@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout
+        xmlns:android="http://schemas.android.com/apk/res/android"
+        xmlns:tools="http://schemas.android.com/tools"
+        android:layout_width="fill_parent" android:layout_height="fill_parent">
+
+        <ScrollView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:id="@+id/scrollView" android:layout_gravity="left|bottom">
+                <LinearLayout
+                        android:orientation="vertical"
+                        android:layout_width="fill_parent"
+                        android:layout_height="426dp" android:layout_gravity="left|top">
+                        <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:textAppearance="?android:attr/textAppearanceLarge"
+                                android:text="Назначение программы на кнопку GPS и управление VideoReg"
+                                android:id="@+id/textView" android:textSize="18dp"/>
+                        <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:textAppearance="?android:attr/textAppearanceMedium"
+                                android:text="    "
+                                android:id="@+id/textView2"/>
+                        <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:textAppearance="?android:attr/textAppearanceLarge"
+                                android:text="GPS приложение"
+                                android:id="@+id/textView3" android:textSize="18dp"/>
+                        <Spinner
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:id="@+id/spinnerGPS"/>
+                        <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:textAppearance="?android:attr/textAppearanceMedium"
+                                android:text="-----"
+                                android:id="@+id/textView4"/>
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                                  android:textAppearance="?android:attr/textAppearanceLarge" android:text="Снимать фото каждые n сек. при выключенном зажигании (0 - выкл)"
+                                  android:id="@+id/textView5" android:visibility="visible" android:textSize="18dp"/>
+                    <EditText
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:inputType="number"
+                                android:ems="10"
+                                android:id="@+id/capturePhoto" android:text="0"/>
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                                  android:textAppearance="?android:attr/textAppearanceMedium" android:text="-----"
+                                  android:id="@+id/textView7"/>
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                                  android:textAppearance="?android:attr/textAppearanceLarge"
+                                  android:text="Задержка записи после перезагрузки"
+                                  android:id="@+id/textView8" android:visibility="visible" android:textSize="18dp"/>
+                        <EditText android:layout_width="match_parent" android:layout_height="wrap_content"
+                                  android:inputType="number" android:ems="10" android:id="@+id/delayBoot" android:text="10"/>
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                                  android:textAppearance="?android:attr/textAppearanceMedium" android:text="-----"
+                                  android:id="@+id/textView9"/>
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                                  android:textAppearance="?android:attr/textAppearanceLarge"
+                                  android:text="Задержка записи после сна" android:id="@+id/textView10"
+                                  android:visibility="visible" android:textSize="18dp" android:layout_gravity="left|bottom"/>
+                        <EditText android:layout_width="match_parent" android:layout_height="wrap_content" android:inputType="number"
+                                  android:ems="10" android:id="@+id/delaySleep" android:text="1" android:layout_gravity="left|bottom"/>
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                                  android:textAppearance="?android:attr/textAppearanceMedium" android:text="-----"
+                                  android:id="@+id/textView11" android:layout_gravity="left|bottom"/>
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                                  android:textAppearance="?android:attr/textAppearanceLarge" android:text="Задержка записи после выключния задней передачи"
+                                  android:id="@+id/textView12" android:visibility="visible" android:textSize="18dp"
+                                  android:layout_gravity="left|bottom"/>
+                        <EditText android:layout_width="match_parent" android:layout_height="wrap_content" android:inputType="number"
+                                  android:ems="10" android:id="@+id/delayReverse" android:text="5" android:layout_gravity="left|bottom"/>
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                              android:textAppearance="?android:attr/textAppearanceLarge"
+                              android:text="-----" android:id="@+id/textView13"
+                              android:visibility="visible" android:textSize="18dp"
+                              android:layout_gravity="left|bottom"/>
+                    <CheckBox
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Оптимизировать размер изображения задней камеры"
+                            android:id="@+id/chOptimizeCamSize"/>
+                </LinearLayout>
+        </ScrollView>
+</FrameLayout>
