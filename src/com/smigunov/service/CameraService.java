@@ -246,9 +246,8 @@ public class CameraService extends Service {
                             }
                         }
 
-                        initCamera();
-
                         if (mCarBackStarted) {
+                            initCamera();
                             carbackParams.width = -1;
                             carbackParams.height = -1;
                             handler.sendMessage(new Message());
@@ -308,16 +307,28 @@ public class CameraService extends Service {
     }
 
     protected void releaseCamera() {
-        if (camera != null) {
-            try {
-                Log.d("CameraService", "releaseCamera");
-                camera.stopPreview();
-                camera.release();
-                camera = null;
-            } catch (Exception e) {
-                Log.d("CameraService", "releaseCamera error " + e.getMessage());
-                e.printStackTrace();
+        boolean released = false;
+        int releaseCount = 3;
+
+        while (!released || releaseCount != 0) {
+            if (camera != null) {
+                try {
+                    Log.d("CameraService", "releaseCamera");
+                    camera.stopPreview();
+                    camera.release();
+                    camera = null;
+                    released = true;
+                } catch (Exception e) {
+                    Log.d("CameraService", "releaseCamera error " + e.getMessage());
+                    e.printStackTrace();
+                    try {
+                        TimeUnit.MILLISECONDS.sleep(50);
+                    } catch (InterruptedException e1) {
+                        e1.printStackTrace();
+                    }
+                }
             }
+            releaseCount--;
         }
     }
 
