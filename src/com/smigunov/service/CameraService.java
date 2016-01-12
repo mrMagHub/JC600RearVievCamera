@@ -308,9 +308,9 @@ public class CameraService extends Service {
 
     protected void releaseCamera() {
         boolean released = false;
-        int releaseCount = 3;
+        int releaseCount = 5;
 
-        while (!released || releaseCount != 0) {
+        while (!released && releaseCount > 0) {
             if (camera != null) {
                 try {
                     Log.d("CameraService", "releaseCamera");
