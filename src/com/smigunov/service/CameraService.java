@@ -4,9 +4,7 @@ import android.app.Application;
 import android.app.Service;
 import android.content.*;
 import android.hardware.Camera;
-import android.os.Handler;
 import android.os.IBinder;
-import android.os.Message;
 import android.util.Log;
 import android.view.*;
 import android.widget.RelativeLayout;
@@ -26,7 +24,6 @@ public class CameraService extends Service {
     private static Camera camera;
     private static WindowManager mWindowManager;
     BroadcastReceiver br;
-    Handler handler;
     private volatile boolean mCarBackStarted = false;
     private volatile boolean mAccOn = true;
     private String pckgGPS, activityGPS = "";
@@ -123,13 +120,6 @@ public class CameraService extends Service {
 
     @Override
     public void onCreate() {
-
-        handler = new Handler() {
-            @Override
-            public void handleMessage(Message msg) {
-                updateWindowManager();
-            }
-        };
 
         super.onCreate();
 
@@ -246,11 +236,12 @@ public class CameraService extends Service {
                             }
                         }
 
+                        initCamera();
+
+                        // Потом отрываем окно, обязательно после initCamera
                         if (mCarBackStarted) {
-                            initCamera();
                             carbackParams.width = -1;
                             carbackParams.height = -1;
-                            handler.sendMessage(new Message());
                         }
 
                         init = true;
