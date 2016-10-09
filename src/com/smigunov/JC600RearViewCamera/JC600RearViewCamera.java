@@ -25,6 +25,7 @@ public class JC600RearViewCamera extends Activity {
     public final static String BROADCAST_ACTION = "com.smigunov.JC600RearViewCamera.CameraService";
     public final static String INTENT_PARAM = "FROM_ACTIVITY";
     public final static String INTENT_STOP_CAMERA = "INTENT_STOP_CAMERA";
+    public final static String INTENT_START_CAMERA = "INTENT_START_CAMERA";
     public final static String INTENT_CHANGE_SETTINGS = "INTENT_CHANGE_SETTINGS";
 
     // Настройки
@@ -215,9 +216,14 @@ public class JC600RearViewCamera extends Activity {
 
     @Override
     public void onBackPressed() {
-        Log.d("JC600RearViewCamera", "releaseCamera");
+        Log.d("JC600RearViewCamera", "onBackPressed");
         activateCamera(INTENT_STOP_CAMERA);
         super.onBackPressed();
     }
 
+    public void onStartCameraClick(View view) {
+        Intent intent = new Intent(JC600RearViewCamera.BROADCAST_ACTION);
+        intent.putExtra(INTENT_PARAM, INTENT_START_CAMERA);
+        sendBroadcast(intent);
+    }
 }

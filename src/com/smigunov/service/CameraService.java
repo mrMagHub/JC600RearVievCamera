@@ -11,6 +11,7 @@ import android.util.Log;
 import android.view.*;
 import android.widget.RelativeLayout;
 import android.widget.Toast;
+
 import com.smigunov.JC600RearViewCamera.JC600RearViewCamera;
 import com.smigunov.JC600RearViewCamera.R;
 
@@ -28,6 +29,7 @@ public class CameraService extends Service {
     BroadcastReceiver br;
     Handler handler;
     private volatile boolean mCarBackStarted = false;
+    private volatile boolean mCameraViewStarted = false;
     private volatile boolean mAccOn = true;
     private String pckgGPS, activityGPS = "";
     private Integer capturePhoto = 0;
@@ -38,6 +40,8 @@ public class CameraService extends Service {
 
     private volatile boolean mCapturePhotoThread = false;
     private volatile boolean mCarbackFrontThread = false;
+    private volatile boolean mReleaseCameraThread = false;
+    private Thread doCarbackFrontThread = null;
     private volatile boolean mRecordThread = false;
     private volatile boolean mVideoRecord = false;
 
@@ -59,13 +63,15 @@ public class CameraService extends Service {
                 }
 
                 if ("CARBACKA".equals(key)) {
-                    if (!mCarBackStarted) {
+                    if (!mCarBackStarted && !mCameraViewStarted) {
                         mCarBackStarted = true;
                         doCarbackFront();
                     }
                 } else if ("CARBACKB".equals(key)) {
-                    mCarBackStarted = false;
-                    doCarbackHide(true);
+                    if (!mCameraViewStarted) {
+                        mCarBackStarted = false;
+                        doCarbackHide(true);
+                    }
                 } else if ("ACCON".equals(key)) {
                     mAccOn = true;
                     // запуск записи
@@ -85,9 +91,10 @@ public class CameraService extends Service {
                 } else if ("HOME_KEY".equals(key) ||
                         ("BACK_KEY".equals(key) ||
                                 JC600RearViewCamera.INTENT_STOP_CAMERA.equals(fromActivity))) {
-                    if (mCarBackStarted) {
-                        doCarbackHide(true);
-                    }
+
+                    mCameraViewStarted = false;
+                    mCarBackStarted = false;
+                    doCarbackHide(true);
                 } else if (JC600RearViewCamera.INTENT_CHANGE_SETTINGS.equals(fromActivity)) {
                     reloadSettings();
                 } else if ("DVR_KEY".equals(key)) {
@@ -111,6 +118,10 @@ public class CameraService extends Service {
                                 Toast.LENGTH_LONG).show();
                         Log.d("CameraService", "GPS_KEY error " + e.getMessage());
                     }
+                } else if (JC600RearViewCamera.INTENT_START_CAMERA.equals(fromActivity)) {
+                    mCameraViewStarted = true;
+                    mCarBackStarted = true;
+                    doCarbackFront();
                 }
             }
         };
@@ -187,7 +198,9 @@ public class CameraService extends Service {
         View.OnClickListener oclick = new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                doCarbackHide(true);
+                Intent intent = new Intent(JC600RearViewCamera.BROADCAST_ACTION);
+                intent.putExtra(JC600RearViewCamera.INTENT_PARAM, JC600RearViewCamera.INTENT_STOP_CAMERA);
+                sendBroadcast(intent);
             }
         };
         mCarBackSurfaceView.setOnClickListener(oclick);
@@ -202,7 +215,7 @@ public class CameraService extends Service {
             }
 
             public void surfaceDestroyed(SurfaceHolder surfaceholder) {
-                releaseCamera();
+                releaseCamera(true);
             }
         });
 
@@ -211,8 +224,7 @@ public class CameraService extends Service {
 
     private void doCarbackFront() {
 
-        new Thread(new Runnable() {
-
+        doCarbackFrontThread = new Thread(new Runnable() {
             @Override
             public void run() {
                 if (mCarbackFrontThread) {
@@ -238,9 +250,9 @@ public class CameraService extends Service {
                 while (!init && mCarBackStarted) {
                     try {
                         if (mVideoRecord) {
-                            Log.d("CameraService", "releaseCamera wait 500");
+                            Log.d("CameraService", "doCarbackFront wait");
                             if (firstIteration) {
-                                TimeUnit.MILLISECONDS.sleep(500);
+                                TimeUnit.MILLISECONDS.sleep(200);
                             } else {
                                 TimeUnit.MILLISECONDS.sleep(100);
                             }
@@ -267,7 +279,9 @@ public class CameraService extends Service {
                 mCarbackFrontThread = false;
 
             }
-        }).start();
+        });
+
+        doCarbackFrontThread.start();
     }
 
     private void doCarbackHide(Boolean startRecord) {
@@ -278,12 +292,7 @@ public class CameraService extends Service {
 
         mWindowManager.updateViewLayout(mCarBackLayout, carbackParams);
 
-        releaseCamera();
-
-        // Запись
-        if (startRecord) {
-            startRecord(delayReverse);
-        }
+        releaseCamera(startRecord);
     }
 
     private void initCamera() throws Exception {
@@ -305,33 +314,77 @@ public class CameraService extends Service {
             camera.setPreviewDisplay(mCarBackSurfaceHolder);
             camera.startPreview();
             Log.d("CameraService", "initCamera");
+        } else {
+            Log.d("CameraService", "initCamera - is init");
         }
     }
 
-    protected void releaseCamera() {
-        boolean released = false;
-        int releaseCount = 5;
+    protected void releaseCamera(final Boolean startRecord) {
 
-        while (!released && releaseCount > 0) {
-            if (camera != null) {
-                try {
-                    Log.d("CameraService", "releaseCamera");
-                    camera.stopPreview();
-                    camera.release();
-                    camera = null;
-                    released = true;
-                } catch (Exception e) {
-                    Log.d("CameraService", "releaseCamera error " + e.getMessage());
-                    e.printStackTrace();
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+
+                if (mReleaseCameraThread) {
+                    Log.d("CameraService", "releaseCamera return");
+                    return;
+                }
+
+                mReleaseCameraThread = true;
+
+                if (doCarbackFrontThread != null && doCarbackFrontThread.isAlive()) {
                     try {
-                        TimeUnit.MILLISECONDS.sleep(500);
-                    } catch (InterruptedException e1) {
-                        e1.printStackTrace();
+                        doCarbackFrontThread.join();
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
                     }
                 }
+
+                if (delayReverse != null && delayReverse > 0) {
+                    try {
+                        TimeUnit.SECONDS.sleep(delayReverse);
+                    } catch (InterruptedException e) {
+                        Log.d("CameraService", "releaseCamera error " + e.getMessage());
+                        e.printStackTrace();
+                    }
+                }
+
+                boolean released = false;
+                int releaseCount = 5;
+
+                while (!released && releaseCount > 0 && !mCarBackStarted) {
+                    if (camera != null) {
+                        try {
+                            Log.d("CameraService", "releaseCamera");
+                            camera.stopPreview();
+                            camera.release();
+                            camera = null;
+                            released = true;
+                        } catch (Exception e) {
+                            Log.d("CameraService", "releaseCamera error " + e.getMessage());
+                            e.printStackTrace();
+                            try {
+                                TimeUnit.MILLISECONDS.sleep(500);
+                            } catch (InterruptedException e1) {
+                                e1.printStackTrace();
+                            }
+                        }
+                    }
+                    releaseCount--;
+                }
+
+                // Запись
+                if (startRecord) {
+                    try {
+                        startRecord(0).join();
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+
+                mReleaseCameraThread = false;
             }
-            releaseCount--;
-        }
+        }).start();
     }
 
     private void reloadSettings() {
@@ -387,9 +440,9 @@ public class CameraService extends Service {
         mWindowManager.updateViewLayout(mCarBackLayout, carbackParams);
     }
 
-    private void startRecord(final Integer delay) {
+    private Thread startRecord(final Integer delay) {
 
-        new Thread(new Runnable() {
+        Thread thread = new Thread(new Runnable() {
             @Override
             public void run() {
 
@@ -415,7 +468,10 @@ public class CameraService extends Service {
                 }
                 mRecordThread = false;
             }
-        }).start();
+        });
+
+        thread.start();
+        return thread;
     }
 
 
