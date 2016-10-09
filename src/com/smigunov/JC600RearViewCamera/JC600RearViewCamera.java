@@ -79,7 +79,7 @@ public class JC600RearViewCamera extends Activity {
             adapter.add(appLabelName);
         }
 
-        Spinner spinnerGPS = (Spinner) findViewById(com.smigunov.JC600RearViewCamera.R.id.spinnerGPS);
+        final Spinner spinnerGPS = (Spinner) findViewById(com.smigunov.JC600RearViewCamera.R.id.spinnerGPS);
         spinnerGPS.setAdapter(adapter);
         spinnerGPS.setOnItemSelectedListener(null);
         ;

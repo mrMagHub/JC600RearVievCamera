@@ -324,7 +324,7 @@ public class CameraService extends Service {
                     Log.d("CameraService", "releaseCamera error " + e.getMessage());
                     e.printStackTrace();
                     try {
-                        TimeUnit.MILLISECONDS.sleep(50);
+                        TimeUnit.MILLISECONDS.sleep(500);
                     } catch (InterruptedException e1) {
                         e1.printStackTrace();
                     }
@@ -387,7 +387,7 @@ public class CameraService extends Service {
         mWindowManager.updateViewLayout(mCarBackLayout, carbackParams);
     }
 
-    private void startRecord(Integer delay) {
+    private void startRecord(final Integer delay) {
 
         new Thread(new Runnable() {
             @Override
