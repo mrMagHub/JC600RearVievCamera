@@ -85,6 +85,7 @@ public class CameraService extends Service {
                     }
                     // остановка записи
                     sendBroadcast(new Intent("rubberbigpepper.VideoReg.StopRecord"));
+                    Log.d("CameraService", "rubberbigpepper.VideoReg.StopRecord");
                     mVideoRecord = false;
                     // Активация съемки фото
                     capturePhoto();
@@ -252,16 +253,15 @@ public class CameraService extends Service {
                         if (mVideoRecord) {
                             Log.d("CameraService", "doCarbackFront wait");
                             if (firstIteration) {
-                                TimeUnit.MILLISECONDS.sleep(200);
-                            } else {
                                 TimeUnit.MILLISECONDS.sleep(100);
+                            } else {
+                                TimeUnit.MILLISECONDS.sleep(50);
                             }
                         }
 
-                        initCamera();
-
                         // Потом отрываем окно, обязательно после initCamera
                         if (mCarBackStarted) {
+                            initCamera();
                             carbackParams.width = -1;
                             carbackParams.height = -1;
                             handler.sendMessage(new Message());
