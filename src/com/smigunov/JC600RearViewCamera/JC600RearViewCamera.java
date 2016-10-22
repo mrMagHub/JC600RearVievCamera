@@ -40,6 +40,7 @@ public class JC600RearViewCamera extends Activity {
     public static String DELAY_SLEEP = "DELAY_SLEEP";
     public static String DELAY_REVERSE = "DELAY_REVERSE";
     public static String OPT_CAMSIZE = "OPT_CAMSIZE";
+    public static String START_CAM = "START_CAM";
 
     private SharedPreferences mSettings;
     private Map<String, String> appsMap = new HashMap<>();
@@ -121,6 +122,12 @@ public class JC600RearViewCamera extends Activity {
         CheckBox chOptCamSize = (CheckBox) findViewById(R.id.chOptimizeCamSize);
         chOptCamSize.setChecked(mSettings.getBoolean(OPT_CAMSIZE, false));
 
+        CheckBox chStartCam = (CheckBox) findViewById(R.id.chStartCam);
+        chStartCam.setChecked(mSettings.getBoolean(START_CAM, false));
+
+        if (chStartCam.isChecked()) {
+            onStartCameraClick(null);
+        }
     }
 
     @Override
@@ -143,6 +150,9 @@ public class JC600RearViewCamera extends Activity {
 
         CheckBox chOptCamSize = (CheckBox) findViewById(R.id.chOptimizeCamSize);
         editor.putBoolean(OPT_CAMSIZE, chOptCamSize.isChecked());
+
+        CheckBox chStartCam = (CheckBox) findViewById(R.id.chStartCam);
+        editor.putBoolean(START_CAM, chStartCam.isChecked());
 
         editor.commit();
 

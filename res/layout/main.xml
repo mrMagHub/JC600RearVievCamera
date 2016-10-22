@@ -87,6 +87,22 @@
                             android:layout_height="wrap_content"
                             android:text="Оптимизировать размер изображения задней камеры"
                             android:id="@+id/chOptimizeCamSize"/>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textAppearance="?android:attr/textAppearanceLarge"
+                        android:text="-----"
+                        android:id="@+id/textView6"
+                        android:visibility="visible"
+                        android:textSize="18dp"
+                        android:layout_gravity="left|bottom" />
+
+                    <CheckBox
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Включить камеру после открытия настроек"
+                        android:id="@+id/chStartCam" />
                 </LinearLayout>
         </ScrollView>
 

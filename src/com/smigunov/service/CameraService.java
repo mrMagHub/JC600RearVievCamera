@@ -38,11 +38,10 @@ public class CameraService extends Service {
     private Integer delayReverse = 0;
     private volatile boolean optimizeCamSize = false;
 
-    private volatile boolean mCapturePhotoThread = false;
-    private volatile boolean mCarbackFrontThread = false;
-    private volatile boolean mReleaseCameraThread = false;
+    private Thread doCapturePhotoThread = null;
     private Thread doCarbackFrontThread = null;
-    private volatile boolean mRecordThread = false;
+    private Thread doReleaseCameraThread = null;
+    private Thread doStartRecordThread = null;
     private volatile boolean mVideoRecord = false;
 
     private Camera.Size cameraSize = null;
@@ -225,20 +224,25 @@ public class CameraService extends Service {
 
     private void doCarbackFront() {
 
+        if (doCarbackFrontThread != null && doCarbackFrontThread.isAlive()) {
+            Log.d("CameraService", "doCarbackFront interrupt");
+            doCarbackFrontThread.interrupt();
+        }
+
         doCarbackFrontThread = new Thread(new Runnable() {
             @Override
             public void run() {
-                if (mCarbackFrontThread) {
-                    Log.d("CameraService", "doCarbackFront return");
+
+                if (Thread.interrupted()) {
+                    Log.d("CameraService", "doCarbackFront interrupted return");
                     return;
                 }
 
                 Log.d("CameraService", "doCarbackFront");
 
-                mCarbackFrontThread = true;
                 boolean init = false;
 
-                if (mVideoRecord) {
+                if (mVideoRecord && !Thread.interrupted()) {
                     // Остановка записи
                     sendBroadcast(new Intent("rubberbigpepper.VideoReg.StopRecord"));
                     // скрыть главное окно
@@ -248,7 +252,7 @@ public class CameraService extends Service {
 
                 boolean firstIteration = true;
 
-                while (!init && mCarBackStarted) {
+                while (!init && mCarBackStarted && !Thread.interrupted()) {
                     try {
                         if (mVideoRecord) {
                             Log.d("CameraService", "doCarbackFront wait");
@@ -260,7 +264,7 @@ public class CameraService extends Service {
                         }
 
                         // Потом отрываем окно, обязательно после initCamera
-                        if (mCarBackStarted) {
+                        if (mCarBackStarted && !Thread.interrupted()) {
                             initCamera();
                             carbackParams.width = -1;
                             carbackParams.height = -1;
@@ -269,14 +273,15 @@ public class CameraService extends Service {
 
                         init = true;
                         mVideoRecord = false;
-                    } catch (Exception e) {
-                        Log.d("CameraService", "releaseCamera error " + e.getMessage());
-                        e.printStackTrace();
+                    } catch (InterruptedException e) {
+                        Log.d("CameraService", "releaseCamera interrupted ");
+                        return;
+                    } catch (Exception e2) {
+                        Log.d("CameraService", "releaseCamera error " + e2.getMessage());
+                        e2.printStackTrace();
                     }
                     firstIteration = false;
                 }
-
-                mCarbackFrontThread = false;
 
             }
         });
@@ -321,38 +326,44 @@ public class CameraService extends Service {
 
     protected void releaseCamera(final Boolean startRecord) {
 
-        new Thread(new Runnable() {
+        if (doReleaseCameraThread != null && doReleaseCameraThread.isAlive()) {
+            Log.d("CameraService", "releaseCamera interrupt");
+            doReleaseCameraThread.interrupt();
+        }
+
+        doReleaseCameraThread = new Thread(new Runnable() {
             @Override
             public void run() {
 
-                if (mReleaseCameraThread) {
-                    Log.d("CameraService", "releaseCamera return");
-                    return;
-                }
-
-                mReleaseCameraThread = true;
+                Log.d("CameraService", "releaseCamera run");
 
                 if (doCarbackFrontThread != null && doCarbackFrontThread.isAlive()) {
                     try {
                         doCarbackFrontThread.join();
                     } catch (InterruptedException e) {
-                        e.printStackTrace();
+                        Log.d("CameraService", "releaseCamera interrupted return");
+                        return;
                     }
+                }
+
+                if (Thread.interrupted()) {
+                    Log.d("CameraService", "releaseCamera interrupted return");
+                    return;
                 }
 
                 if (delayReverse != null && delayReverse > 0) {
                     try {
                         TimeUnit.SECONDS.sleep(delayReverse);
                     } catch (InterruptedException e) {
-                        Log.d("CameraService", "releaseCamera error " + e.getMessage());
-                        e.printStackTrace();
+                        Log.d("CameraService", "releaseCamera interrupted return");
+                        return;
                     }
                 }
 
                 boolean released = false;
                 int releaseCount = 5;
 
-                while (!released && releaseCount > 0 && !mCarBackStarted) {
+                while (!released && releaseCount > 0 && !mCarBackStarted && !Thread.interrupted()) {
                     if (camera != null) {
                         try {
                             Log.d("CameraService", "releaseCamera");
@@ -366,7 +377,8 @@ public class CameraService extends Service {
                             try {
                                 TimeUnit.MILLISECONDS.sleep(500);
                             } catch (InterruptedException e1) {
-                                e1.printStackTrace();
+                                Log.d("CameraService", "releaseCamera interrupted return");
+                                return;
                             }
                         }
                     }
@@ -376,15 +388,19 @@ public class CameraService extends Service {
                 // Запись
                 if (startRecord) {
                     try {
-                        startRecord(0).join();
+                        TimeUnit.SECONDS.sleep(2);
+                        if (!Thread.interrupted()) {
+                            startRecord(0).join();
+                        }
                     } catch (InterruptedException e) {
-                        e.printStackTrace();
+                        Log.d("CameraService", "releaseCamera interrupted return");
                     }
                 }
 
-                mReleaseCameraThread = false;
             }
-        }).start();
+        });
+
+        doReleaseCameraThread.start();
     }
 
     private void reloadSettings() {
@@ -404,36 +420,36 @@ public class CameraService extends Service {
     }
 
     private void capturePhoto() {
+        if (doCapturePhotoThread != null && doCapturePhotoThread.isAlive()) {
+            Log.d("CameraService", "capturePhoto interrupt");
+            doCapturePhotoThread.interrupt();
+        }
 
-        new Thread(new Runnable() {
+        doCapturePhotoThread = new Thread(new Runnable() {
             @Override
             public void run() {
-                if (mCapturePhotoThread) {
-                    return;
-                }
+
                 if (capturePhoto == 0) {
                     return;
                 }
 
-                mCapturePhotoThread = true;
                 Log.d("CameraService", "capturePhoto start");
 
                 try {
                     TimeUnit.SECONDS.sleep(30);
 
-                    while (!mCarBackStarted && !mAccOn) {
+                    while (!mCarBackStarted && !mAccOn && !Thread.interrupted()) {
 
                         sendBroadcast(new Intent("rubberbigpepper.VideoReg.CapturePhoto"));
                         TimeUnit.SECONDS.sleep(capturePhoto);
                     }
                 } catch (InterruptedException e) {
-                    Log.d("CameraService", "capturePhoto error " + e.getMessage());
-                    e.printStackTrace();
-                } finally {
-                    mCapturePhotoThread = false;
+                    Log.d("CameraService", "capturePhoto Interrupted ");
                 }
             }
-        }).start();
+        });
+
+        doCapturePhotoThread.start();
     }
 
     private synchronized void updateWindowManager() {
@@ -442,36 +458,34 @@ public class CameraService extends Service {
 
     private Thread startRecord(final Integer delay) {
 
-        Thread thread = new Thread(new Runnable() {
+        if (doStartRecordThread != null && doStartRecordThread.isAlive()) {
+            Log.d("CameraService", "startRecord interrupt");
+            doStartRecordThread.interrupt();
+        }
+
+        doStartRecordThread = new Thread(new Runnable() {
             @Override
             public void run() {
-
-                if (mRecordThread) {
-                    return;
-                }
-                Log.d("CameraService", "doCarbackHide");
-                mRecordThread = true;
 
                 if (delay != null && delay > 0) {
                     try {
                         TimeUnit.SECONDS.sleep(delay);
                     } catch (InterruptedException e) {
-                        Log.d("CameraService", "doCarbackHide error " + e.getMessage());
-                        e.printStackTrace();
+                        Log.d("CameraService", "startRecord interrupted " + e.getMessage());
+                        return;
                     }
                 }
 
-                if (!mCarBackStarted && mAccOn) {
+                if (!mCarBackStarted && mAccOn && !Thread.interrupted()) {
                     sendBroadcast(new Intent("rubberbigpepper.VideoReg.StartRecord"));
                     mVideoRecord = true;
                     Log.d("CameraService", "doCarbackHide rubberbigpepper.VideoReg.StartRecord");
                 }
-                mRecordThread = false;
             }
         });
 
-        thread.start();
-        return thread;
+        doStartRecordThread.start();
+        return doStartRecordThread;
     }
 
 
