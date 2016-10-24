@@ -42,6 +42,7 @@ public class CameraService extends Service {
     private Thread doCarbackFrontThread = null;
     private Thread doReleaseCameraThread = null;
     private Thread doStartRecordThread = null;
+    private volatile boolean mCarbackFrontThread = false;
     private volatile boolean mVideoRecord = false;
 
     private Camera.Size cameraSize = null;
@@ -184,7 +185,7 @@ public class CameraService extends Service {
         getApplication();
         mWindowManager = (WindowManager) application.getSystemService(Context.WINDOW_SERVICE);
         carbackParams = new android.view.WindowManager.LayoutParams();
-        carbackParams.type = 2002;
+        carbackParams.type = WindowManager.LayoutParams.TYPE_PHONE;
         carbackParams.format = 1;
         carbackParams.flags = 8;
         carbackParams.gravity = 17;
@@ -224,25 +225,20 @@ public class CameraService extends Service {
 
     private void doCarbackFront() {
 
-        if (doCarbackFrontThread != null && doCarbackFrontThread.isAlive()) {
-            Log.d("CameraService", "doCarbackFront interrupt");
-            doCarbackFrontThread.interrupt();
-        }
-
         doCarbackFrontThread = new Thread(new Runnable() {
             @Override
             public void run() {
-
-                if (Thread.interrupted()) {
-                    Log.d("CameraService", "doCarbackFront interrupted return");
+                if (mCarbackFrontThread) {
+                    Log.d("CameraService", "doCarbackFront return");
                     return;
                 }
 
                 Log.d("CameraService", "doCarbackFront");
 
+                mCarbackFrontThread = true;
                 boolean init = false;
 
-                if (mVideoRecord && !Thread.interrupted()) {
+                if (mVideoRecord) {
                     // Остановка записи
                     sendBroadcast(new Intent("rubberbigpepper.VideoReg.StopRecord"));
                     // скрыть главное окно
@@ -252,7 +248,7 @@ public class CameraService extends Service {
 
                 boolean firstIteration = true;
 
-                while (!init && mCarBackStarted && !Thread.interrupted()) {
+                while (!init && mCarBackStarted) {
                     try {
                         if (mVideoRecord) {
                             Log.d("CameraService", "doCarbackFront wait");
@@ -263,9 +259,10 @@ public class CameraService extends Service {
                             }
                         }
 
+                        initCamera();
+
                         // Потом отрываем окно, обязательно после initCamera
-                        if (mCarBackStarted && !Thread.interrupted()) {
-                            initCamera();
+                        if (mCarBackStarted) {
                             carbackParams.width = -1;
                             carbackParams.height = -1;
                             handler.sendMessage(new Message());
@@ -273,16 +270,15 @@ public class CameraService extends Service {
 
                         init = true;
                         mVideoRecord = false;
-                    } catch (InterruptedException e) {
-                        Log.d("CameraService", "releaseCamera interrupted ");
-                        return;
                     } catch (Exception e2) {
-                        Log.d("CameraService", "releaseCamera error " + e2.getMessage());
+                        Log.d("CameraService", "doCarbackFront error " + e2.getMessage());
                         e2.printStackTrace();
                     }
                     firstIteration = false;
                 }
 
+                mCarbackFrontThread = false;
+                Log.d("CameraService", "doCarbackFront end");
             }
         });
 
@@ -361,25 +357,23 @@ public class CameraService extends Service {
                 }
 
                 boolean released = false;
-                int releaseCount = 5;
+                int releaseCount = 50;
 
-                while (!released && releaseCount > 0 && !mCarBackStarted && !Thread.interrupted()) {
-                    if (camera != null) {
+                while (!released && releaseCount > 0 && camera != null && !Thread.interrupted()) {
+                    try {
+                        Log.d("CameraService", "releaseCamera");
+                        camera.stopPreview();
+                        camera.release();
+                        camera = null;
+                        released = true;
+                    } catch (Exception e) {
+                        Log.d("CameraService", "releaseCamera error " + e.getMessage());
+                        e.printStackTrace();
                         try {
-                            Log.d("CameraService", "releaseCamera");
-                            camera.stopPreview();
-                            camera.release();
-                            camera = null;
-                            released = true;
-                        } catch (Exception e) {
-                            Log.d("CameraService", "releaseCamera error " + e.getMessage());
-                            e.printStackTrace();
-                            try {
-                                TimeUnit.MILLISECONDS.sleep(500);
-                            } catch (InterruptedException e1) {
-                                Log.d("CameraService", "releaseCamera interrupted return");
-                                return;
-                            }
+                            TimeUnit.MILLISECONDS.sleep(100);
+                        } catch (InterruptedException e1) {
+                            Log.d("CameraService", "releaseCamera interrupted return");
+                            return;
                         }
                     }
                     releaseCount--;
