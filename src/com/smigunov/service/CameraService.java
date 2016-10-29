@@ -225,6 +225,11 @@ public class CameraService extends Service {
 
     private void doCarbackFront() {
 
+        if (doReleaseCameraThread != null && doReleaseCameraThread.isAlive()) {
+            Log.d("CameraService", "releaseCamera interrupt");
+            doReleaseCameraThread.interrupt();
+        }
+
         doCarbackFrontThread = new Thread(new Runnable() {
             @Override
             public void run() {
@@ -342,7 +347,7 @@ public class CameraService extends Service {
                     }
                 }
 
-                if (Thread.interrupted()) {
+                if (Thread.interrupted() || mCarBackStarted) {
                     Log.d("CameraService", "releaseCamera interrupted return");
                     return;
                 }
@@ -359,7 +364,7 @@ public class CameraService extends Service {
                 boolean released = false;
                 int releaseCount = 50;
 
-                while (!released && releaseCount > 0 && camera != null && !Thread.interrupted()) {
+                while (!released && releaseCount > 0 && !Thread.interrupted()) {
                     try {
                         Log.d("CameraService", "releaseCamera");
                         camera.stopPreview();
@@ -382,7 +387,7 @@ public class CameraService extends Service {
                 // Запись
                 if (startRecord) {
                     try {
-                        TimeUnit.SECONDS.sleep(2);
+                        TimeUnit.SECONDS.sleep(3);
                         if (!Thread.interrupted()) {
                             startRecord(0).join();
                         }
@@ -472,8 +477,9 @@ public class CameraService extends Service {
 
                 if (!mCarBackStarted && mAccOn && !Thread.interrupted()) {
                     sendBroadcast(new Intent("rubberbigpepper.VideoReg.StartRecord"));
+                    sendBroadcast(new Intent("rubberbigpepper.VideoReg.HideMainWindow"));
                     mVideoRecord = true;
-                    Log.d("CameraService", "doCarbackHide rubberbigpepper.VideoReg.StartRecord");
+                    Log.d("CameraService", "doCarbackHide rubberbigpepper.VideoReg.StartRecord + HideMainWindow");
                 }
             }
         });
