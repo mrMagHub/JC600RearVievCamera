@@ -472,9 +472,8 @@ public class CameraService extends Service {
 
                 if (!mCarBackStarted && mAccOn && !Thread.interrupted()) {
                     sendBroadcast(new Intent("rubberbigpepper.VideoReg.StartRecord"));
-                    sendBroadcast(new Intent("rubberbigpepper.VideoReg.HideMainWindow"));
                     mVideoRecord = true;
-                    Log.d("CameraService", "doCarbackHide rubberbigpepper.VideoReg.StartRecord + HideMainWindow");
+                    Log.d("CameraService", "doCarbackHide rubberbigpepper.VideoReg.StartRecord");
                 }
             }
         });
