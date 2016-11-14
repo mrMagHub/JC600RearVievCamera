@@ -38,10 +38,10 @@ public class CameraService extends Service {
     private Integer delayReverse = 0;
     private volatile boolean optimizeCamSize = false;
 
-    private Thread doCapturePhotoThread = null;
-    private Thread doCarbackFrontThread = null;
-    private Thread doReleaseCameraThread = null;
-    private Thread doStartRecordThread = null;
+    private volatile Thread doCapturePhotoThread = null;
+    private volatile Thread doCarbackFrontThread = null;
+    private volatile Thread doReleaseCameraThread = null;
+    private volatile Thread doStartRecordThread = null;
     private volatile boolean mCarbackFrontThread = false;
     private volatile boolean mVideoRecord = false;
 
@@ -225,11 +225,6 @@ public class CameraService extends Service {
 
     private void doCarbackFront() {
 
-        if (doReleaseCameraThread != null && doReleaseCameraThread.isAlive()) {
-            Log.d("CameraService", "releaseCamera interrupt");
-            doReleaseCameraThread.interrupt();
-        }
-
         doCarbackFrontThread = new Thread(new Runnable() {
             @Override
             public void run() {
@@ -364,7 +359,7 @@ public class CameraService extends Service {
                 boolean released = false;
                 int releaseCount = 50;
 
-                while (!released && releaseCount > 0 && !Thread.interrupted()) {
+                while (!released && releaseCount > 0 && !Thread.interrupted() && camera != null) {
                     try {
                         Log.d("CameraService", "releaseCamera");
                         camera.stopPreview();
