@@ -225,6 +225,16 @@ public class CameraService extends Service {
 
     private void doCarbackFront() {
 
+        if (doStartRecordThread != null && doStartRecordThread.isAlive()) {
+            Log.d("CameraService", "doStartRecordThread interrupt");
+            doStartRecordThread.interrupt();
+        }
+
+        if (doReleaseCameraThread != null && doReleaseCameraThread.isAlive()) {
+            Log.d("CameraService", "releaseCamera interrupt");
+            doReleaseCameraThread.interrupt();
+        }
+
         doCarbackFrontThread = new Thread(new Runnable() {
             @Override
             public void run() {
@@ -335,10 +345,10 @@ public class CameraService extends Service {
 
                 if (doCarbackFrontThread != null && doCarbackFrontThread.isAlive()) {
                     try {
+                        Log.d("CameraService", " releaseCamera doCarbackFrontThread join");
                         doCarbackFrontThread.join();
                     } catch (InterruptedException e) {
-                        Log.d("CameraService", "releaseCamera interrupted return");
-                        return;
+                        Log.d("CameraService", "releaseCamera doCarbackFrontThread join interrupted");
                     }
                 }
 
@@ -351,7 +361,7 @@ public class CameraService extends Service {
                     try {
                         TimeUnit.SECONDS.sleep(delayReverse);
                     } catch (InterruptedException e) {
-                        Log.d("CameraService", "releaseCamera interrupted return");
+                        Log.d("CameraService", "releaseCamera interrupted delayReverse return");
                         return;
                     }
                 }
@@ -359,9 +369,11 @@ public class CameraService extends Service {
                 boolean released = false;
                 int releaseCount = 50;
 
+                Log.d("CameraService", "releaseCamera stopPreview enter");
+
                 while (!released && releaseCount > 0 && !Thread.interrupted() && camera != null) {
                     try {
-                        Log.d("CameraService", "releaseCamera");
+                        Log.d("CameraService", "releaseCamera stopPreview releaseCount:" + releaseCount);
                         camera.stopPreview();
                         camera.release();
                         camera = null;
@@ -379,11 +391,14 @@ public class CameraService extends Service {
                     releaseCount--;
                 }
 
+                Log.d("CameraService", "releaseCamera ok");
+
                 // Запись
                 if (startRecord) {
                     try {
                         TimeUnit.SECONDS.sleep(3);
                         if (!Thread.interrupted()) {
+                            Log.d("CameraService", "releaseCamera startRecord");
                             startRecord(0).join();
                         }
                     } catch (InterruptedException e) {
@@ -451,6 +466,8 @@ public class CameraService extends Service {
     }
 
     private Thread startRecord(final Integer delay) {
+
+        Log.d("CameraService", "startRecord");
 
         if (doStartRecordThread != null && doStartRecordThread.isAlive()) {
             Log.d("CameraService", "startRecord interrupt");
