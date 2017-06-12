@@ -103,6 +103,38 @@
                         android:layout_height="wrap_content"
                         android:text="Включить камеру после открытия настроек"
                         android:id="@+id/chStartCam" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textAppearance="?android:attr/textAppearanceLarge"
+                        android:text="-----"
+                        android:id="@+id/textView14"
+                        android:visibility="visible"
+                        android:textSize="18dp"
+                        android:layout_gravity="left|bottom" />
+
+                    <CheckBox
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Выключить звук при заднем ходе"
+                        android:id="@+id/chMuteRev" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textAppearance="?android:attr/textAppearanceLarge"
+                        android:text="-----"
+                        android:id="@+id/textView15"
+                        android:visibility="visible"
+                        android:textSize="18dp"
+                        android:layout_gravity="left|bottom" />
+
+                    <CheckBox
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Режим полёта при выкл. зажигании"
+                        android:id="@+id/chAirMode" />
                 </LinearLayout>
         </ScrollView>
 

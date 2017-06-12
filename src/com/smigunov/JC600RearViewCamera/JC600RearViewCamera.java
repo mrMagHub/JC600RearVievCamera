@@ -41,6 +41,8 @@ public class JC600RearViewCamera extends Activity {
     public static String DELAY_REVERSE = "DELAY_REVERSE";
     public static String OPT_CAMSIZE = "OPT_CAMSIZE";
     public static String START_CAM = "START_CAM";
+    public static String MUTE_REVERSE = "MUTE_REVERSE";
+    public static String AIR_MODE = "AIR_MODE";
 
     private SharedPreferences mSettings;
     private Map<String, String> appsMap = new HashMap<>();
@@ -125,6 +127,12 @@ public class JC600RearViewCamera extends Activity {
         CheckBox chStartCam = (CheckBox) findViewById(R.id.chStartCam);
         chStartCam.setChecked(mSettings.getBoolean(START_CAM, false));
 
+        CheckBox chMuteRev = (CheckBox) findViewById(R.id.chMuteRev);
+        chMuteRev.setChecked(mSettings.getBoolean(MUTE_REVERSE, false));
+
+        CheckBox chAirMode = (CheckBox) findViewById(R.id.chAirMode);
+        chAirMode.setChecked(mSettings.getBoolean(AIR_MODE, false));
+
         if (chStartCam.isChecked()) {
             onStartCameraClick(null);
         }
@@ -153,6 +161,12 @@ public class JC600RearViewCamera extends Activity {
 
         CheckBox chStartCam = (CheckBox) findViewById(R.id.chStartCam);
         editor.putBoolean(START_CAM, chStartCam.isChecked());
+
+        CheckBox chMuteRev = (CheckBox) findViewById(R.id.chMuteRev);
+        editor.putBoolean(MUTE_REVERSE, chMuteRev.isChecked());
+
+        CheckBox chAirMode = (CheckBox) findViewById(R.id.chAirMode);
+        editor.putBoolean(AIR_MODE, chAirMode.isChecked());
 
         editor.commit();
 

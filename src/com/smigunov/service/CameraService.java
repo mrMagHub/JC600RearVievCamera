@@ -1,20 +1,36 @@
 package com.smigunov.service;
 
+import android.annotation.SuppressLint;
 import android.app.Application;
 import android.app.Service;
-import android.content.*;
+import android.content.BroadcastReceiver;
+import android.content.ComponentName;
+import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
+import android.content.SharedPreferences;
 import android.hardware.Camera;
+import android.media.AudioManager;
+import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Message;
+import android.provider.Settings;
 import android.util.Log;
-import android.view.*;
+import android.view.Display;
+import android.view.LayoutInflater;
+import android.view.SurfaceHolder;
+import android.view.SurfaceView;
+import android.view.View;
+import android.view.WindowManager;
 import android.widget.RelativeLayout;
 import android.widget.Toast;
 
 import com.smigunov.JC600RearViewCamera.JC600RearViewCamera;
 import com.smigunov.JC600RearViewCamera.R;
+import com.smigunov.JC600RearViewCamera.RootUtil;
 
+import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
 public class CameraService extends Service {
@@ -37,6 +53,8 @@ public class CameraService extends Service {
     private Integer delaySleep = 0;
     private Integer delayReverse = 0;
     private volatile boolean optimizeCamSize = false;
+    private volatile boolean muteRev = false;
+    private volatile boolean airMode = false;
 
     private volatile Thread doCapturePhotoThread = null;
     private volatile Thread doCarbackFrontThread = null;
@@ -66,11 +84,13 @@ public class CameraService extends Service {
                     if (!mCarBackStarted && !mCameraViewStarted) {
                         mCarBackStarted = true;
                         doCarbackFront();
+                        doMute(true);
                     }
                 } else if ("CARBACKB".equals(key)) {
                     if (!mCameraViewStarted) {
                         mCarBackStarted = false;
                         doCarbackHide(true);
+                        doMute(false);
                     }
                 } else if ("ACCON".equals(key)) {
                     mAccOn = true;
@@ -426,6 +446,8 @@ public class CameraService extends Service {
         delaySleep = mSettings.getInt(JC600RearViewCamera.DELAY_SLEEP, 1);
         delayReverse = mSettings.getInt(JC600RearViewCamera.DELAY_REVERSE, 5);
         optimizeCamSize = mSettings.getBoolean(JC600RearViewCamera.OPT_CAMSIZE, false);
+        muteRev = mSettings.getBoolean(JC600RearViewCamera.MUTE_REVERSE, false);
+        airMode = mSettings.getBoolean(JC600RearViewCamera.AIR_MODE, false);
     }
 
     private void capturePhoto() {
@@ -525,5 +547,117 @@ public class CameraService extends Service {
         return result;
     }
 
+    private void doMute(Boolean mute) {
+        if (muteRev) {
+            if (mute) {
+                AudioManager amanager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
+                amanager.setStreamMute(AudioManager.STREAM_NOTIFICATION, true);
+                amanager.setStreamMute(AudioManager.STREAM_ALARM, true);
+                amanager.setStreamMute(AudioManager.STREAM_MUSIC, true);
+                amanager.setStreamMute(AudioManager.STREAM_RING, true);
+                amanager.setStreamMute(AudioManager.STREAM_SYSTEM, true);
+            } else {
+                AudioManager amanager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
+                amanager.setStreamMute(AudioManager.STREAM_NOTIFICATION, false);
+                amanager.setStreamMute(AudioManager.STREAM_ALARM, false);
+                amanager.setStreamMute(AudioManager.STREAM_MUSIC, false);
+                amanager.setStreamMute(AudioManager.STREAM_RING, false);
+                amanager.setStreamMute(AudioManager.STREAM_SYSTEM, false);
+            }
+        }
+    }
+
+    @SuppressLint("NewApi")
+    @SuppressWarnings("deprecation")
+    public void doFlightMode(Context context, Boolean airOn) {
+
+        if (!airMode) {
+            return;
+        }
+
+        boolean enabled = !airOn;
+//        boolean enabled = isFlightModeEnabled(context);
+//
+//        if (airOn && enabled) {
+//            return;
+//        }
+
+        if (Build.VERSION.SDK_INT > Build.VERSION_CODES.JELLY_BEAN) {
+            // API 17 onwards.
+            if (RootUtil.isDeviceRooted()) {
+                int enabledInt = enabled ? 0 : 1;
+                // Set Airplane / Flight mode using su commands.
+                String COMMAND_FLIGHT_MODE_1 = "settings put global airplane_mode_on";
+                String command = COMMAND_FLIGHT_MODE_1 + " " + enabledInt;
+                executeCommandWithoutWait("-c", command);
+
+                String COMMAND_FLIGHT_MODE_2 = "am broadcast -a android.intent.action.AIRPLANE_MODE --ez state";
+                command = COMMAND_FLIGHT_MODE_2 + " " + (enabledInt == 0 ? "false" : "true");
+                executeCommandWithoutWait("-c", command);
+
+                // gps on/off
+                String COMMAND_FLIGHT_MODE_3 = "settings put secure location_providers_allowed";
+                command = COMMAND_FLIGHT_MODE_3 + " " + (airOn ? "-gps" : "+gps");
+                executeCommandWithoutWait("-c", command);
+            }
+        } else {
+            // API 16 and earlier.
+            Settings.System.putInt(context.getContentResolver(), Settings.System.AIRPLANE_MODE_ON, enabled ? 0 : 1);
+            Intent intent = new Intent(Intent.ACTION_AIRPLANE_MODE_CHANGED);
+            intent.putExtra("state", !enabled);
+            context.sendBroadcast(intent);
+        }
+
+        if (airOn) {
+            Toast.makeText(CameraService.this,
+                    "Режим полета включен",
+                    Toast.LENGTH_LONG).show();
+        } else {
+            Toast.makeText(CameraService.this,
+                    "Режим полета выключен",
+                    Toast.LENGTH_LONG).show();
+        }
+    }
+
+    //To check whether Airplane / Flight mode is already on and off, do the following:
+    @SuppressLint("NewApi")
+    @SuppressWarnings("deprecation")
+    private boolean isFlightModeEnabled(Context context) {
+        boolean mode;
+        if (Build.VERSION.SDK_INT > Build.VERSION_CODES.JELLY_BEAN) {
+            // API 17 onwards
+            mode = Settings.Global.getInt(context.getContentResolver(), Settings.Global.AIRPLANE_MODE_ON, 0) == 1;
+        } else {
+            // API 16 and earlier.
+            mode = Settings.System.getInt(context.getContentResolver(), Settings.System.AIRPLANE_MODE_ON, 0) == 1;
+        }
+        return mode;
+    }
+
+
+    //To execute su command, do the following:
+    private void executeCommandWithoutWait(String option, String command) {
+        boolean success = false;
+        String su = "su";
+        for (int i = 0; i < 3; i++) {
+            // "su" command executed successfully.
+            if (success) {
+                // Stop executing alternative su commands below.
+                break;
+            }
+            if (i == 1) {
+                su = "/system/xbin/su";
+            } else if (i == 2) {
+                su = "/system/bin/su";
+            }
+            try {
+                // execute command
+                Runtime.getRuntime().exec(new String[]{su, option, command});
+                success = true;
+            } catch (IOException e) {
+                Log.e("CameraService", "su command has failed due to: " + e.fillInStackTrace());
+            }
+        }
+    }
 }
 
